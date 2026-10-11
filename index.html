@@ -1,0 +1,125 @@
+<!DOCTYPE html>
+<html lang="ms">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Trusted Midman Hub</title>
+<style>
+*{box-sizing:border-box}
+body{margin:0;background:#080b12;color:#f1f5f9;font-family:Arial,sans-serif}
+header{padding:24px 18px;background:#101725;border-bottom:1px solid #253047}
+.wrap{max-width:900px;margin:auto}
+.logo{color:#63e6be;font-size:24px;font-weight:800}
+header p{color:#9aa8bd;font-size:13px}
+main{max-width:900px;margin:auto;padding:20px 16px}
+.hero{padding:24px 20px;background:linear-gradient(135deg,#142b32,#17162d);border:1px solid #29434a;border-radius:18px}
+.hero h1{font-size:30px;margin:0 0 12px}
+.hero p{color:#bdc8d8;line-height:1.6}
+.tag{color:#63e6be;font-size:12px;font-weight:bold}
+input,select{width:100%;padding:13px;margin:7px 0;background:#101725;border:1px solid #29364b;border-radius:10px;color:white}
+h2{font-size:19px;margin-top:27px}
+.cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:12px}
+.card{background:#101725;border:1px solid #27344a;padding:17px;border-radius:14px}
+.card h3{margin:0 0 10px}
+.muted{color:#9aa8bd;font-size:13px;line-height:1.6}
+.status{color:#facc15;font-size:12px}
+.btn{display:inline-block;padding:11px 14px;border-radius:9px;background:#63e6be;color:#07120f;text-decoration:none;font-weight:bold;border:0;margin-top:8px;cursor:pointer}
+footer{text-align:center;color:#748197;padding:30px 15px;font-size:12px}
+</style>
+</head>
+<body>
+<header>
+  <div class="wrap">
+    <div class="logo">◆ TRUSTED MIDMAN HUB</div>
+    <p>Platform direktori midman komuniti gaming</p>
+  </div>
+</header>
+<main>
+  <section class="hero">
+    <div class="tag">COMMUNITY DIRECTORY</div>
+    <h1>Cari Midman Anda.</h1>
+    <p>Semak maklumat midman sebelum membuat sebarang urusan. Status dalam laman ini bukan jaminan bahawa seseorang itu bebas daripada penipuan.</p>
+    <a class="btn" href="#senarai">Lihat Senarai</a>
+  </section>
+
+  <h2 id="senarai">Senarai Midman</h2>
+  <input id="search" placeholder="Cari nama atau game..." oninput="render()">
+  <select id="filter" onchange="render()">
+    <option value="">Semua game</option>
+    <option>Free Fire</option>
+    <option>Mobile Legends</option>
+    <option>Roblox</option>
+    <option>Lain-lain</option>
+  </select>
+  <div id="cards" class="cards">
+    <div class="card"><p class="muted">Memuatkan senarai midman...</p></div>
+  </div>
+  <p class="muted">Sentiasa semak identiti melalui saluran rasmi. Jangan kongsi kata laluan atau OTP.</p>
+</main>
+<footer>TRUSTED MIDMAN HUB · Community directory</footer>
+
+<script>
+const SUPABASE_URL = "https://inbcdidpskpconggebxe.supabase.co";
+const SUPABASE_KEY = "MASUKKAN_PUBLISHABLE_KEY_DI_SINI";
+let midmen = [];
+
+async function loadMidmen(){
+  const area = document.getElementById("cards");
+  if(SUPABASE_KEY === "sb_publishable_KcyGAZhKzneQ3DNGfIfeyA_Ts_goqJr"){
+    area.innerHTML = '<div class="card"><h3>Belum disambungkan</h3><p class="muted">Sambungkan Publishable Key Supabase untuk memuatkan senarai.</p></div>';
+    return;
+  }
+  try{
+    const response = await fetch(
+      SUPABASE_URL + "/rest/v1/midmen?select=id,name,game,telegram_url,description,evidence_url,verification_status&order=created_at.desc",
+      {headers:{
+        "apikey":SUPABASE_KEY,
+        "Authorization":"Bearer "+SUPABASE_KEY
+      }}
+    );
+    if(!response.ok) throw new Error("HTTP "+response.status);
+    midmen = await response.json();
+    render();
+  }catch(error){
+    area.innerHTML = '<div class="card"><h3>Data belum dapat dimuatkan</h3><p class="muted">Semak tetapan API dan kebenaran jadual Supabase.</p></div>';
+  }
+}
+
+function safe(value){
+  return String(value ?? "").replace(/[&<>"']/g, c => ({
+    "&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"
+  }[c]));
+}
+function validLink(value){
+  try{
+    const u = new URL(value);
+    return u.protocol === "https:" ? u.href : "";
+  }catch{return "";}
+}
+function render(){
+  const q = document.getElementById("search").value.toLowerCase();
+  const game = document.getElementById("filter").value;
+  const filtered = midmen.filter(m =>
+    ((m.name||"")+" "+(m.game||"")).toLowerCase().includes(q) &&
+    (!game || m.game === game)
+  );
+  const area = document.getElementById("cards");
+  if(!filtered.length){
+    area.innerHTML='<div class="card"><p class="muted">Tiada midman dijumpai.</p></div>';
+    return;
+  }
+  area.innerHTML=filtered.map(m=>{
+    const link=validLink(m.telegram_url);
+    return '<article class="card">'+
+      '<h3>'+safe(m.name||"Midman")+'</h3>'+
+      '<div class="tag">'+safe(m.game||"Game tidak dinyatakan")+'</div>'+
+      '<p class="muted">'+safe(m.description||"Tiada penerangan.")+'</p>'+
+      '<p class="status">Status: '+safe(m.verification_status||"Belum disahkan")+'</p>'+
+      (link?'<a class="btn" href="'+safe(link)+'" target="_blank" rel="noopener noreferrer">Buka Telegram</a>':'')+
+      '</article>';
+  }).join("");
+}
+loadMidmen();
+</script>
+</body>
+</html>
